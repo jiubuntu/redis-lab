@@ -2,8 +2,6 @@
 
 애플리케이션이 데이터를 캐시에서 먼저 찾고, 없으면 DB를 조회해 캐시에 채워 넣는 가장 기본적인 캐싱 전략이다.
 
-> **첫 요청은 느리지만, 이후 요청부터는 빨라지는 구조**가 핵심이다.
-
 ## 개념
 
 - 캐시와 DB를 애플리케이션 코드가 직접 관리하는 방식 (캐시 라이브러리/DB가 알아서 동기화해주지 않음)
@@ -31,8 +29,8 @@
 ## 주의할 점
 
 - 무분별하게 모든 데이터에 적용하면 오히려 손해 (캐시 갱신/무효화 비용, 메모리 비용 발생)
-- 캐시와 DB 사이의 짧은 불일치(inconsistency) 구간이 존재할 수 있음
-- Cache Miss가 몰리는 순간 DB에 부하가 집중될 수 있음 (Thundering Herd)
+- 캐시와 DB 사이의 짧은 불일치 구간이 존재할 수 있음
+- Cache Miss가 몰리는 순간 DB에 부하가 집중될 수 있음 
 
 ## 언제 적용하면 좋은가
 
@@ -48,29 +46,22 @@
 
 DB 데이터를 수정/삭제했는데 캐시는 그대로 남아있으면, 다음 조회에서 Cache Hit가 발생해 **이미 낡은(stale) 데이터**를 정답인 것처럼 반환하게 된다. 캐시 무효화 전략은 이 정합성 문제를 막기 위해, **DB 데이터가 수정/삭제될 때 관련된 Redis 캐시도 함께 지워주는 것**이다.
 
-### 왜 "갱신"이 아니라 "삭제"인가
+### 왜 갱신이 아니라 삭제인가
 
 캐시가 stale해지는 걸 막는 방법은 크게 두 가지다.
 
 | 전략 | 방식 | 특징 |
 | --- | --- | --- |
 | 캐시 갱신 (Update) | DB 갱신과 동시에 캐시도 최신 값으로 덮어씀 | 캐싱 로직을 쓰기 경로에도 중복 구현해야 하고, 실수로 값이 어긋날 여지가 있음 |
-| 캐시 무효화 (Invalidate) | DB 갱신 후 캐시를 삭제만 함 | 다음 조회가 자연스럽게 Cache Miss → DB 재조회 → 재캐싱을 하므로 항상 DB가 최종 소스(source of truth) |
+| 캐시 무효화 (Invalidate) | DB 갱신 후 캐시를 삭제만 함 | 다음 조회가 자연스럽게 Cache Miss → DB 재조회 → 재캐싱을 하므로 항상 DB가 최종 소스 |
 
-이 예제는 **삭제** 방식을 택했다. `updateUser()`에서 DB 갱신이 끝난 뒤 `redisService.delete(cacheKey)`만 호출하고, 캐시에 새 값을 직접 채워 넣지 않는다. 조회 로직(`getUser`)이 이미 "Miss면 DB에서 읽고 캐싱"하는 책임을 갖고 있으므로, 쓰기 경로에서는 캐시를 지우기만 해도 다음 읽기에서 자동으로 최신 데이터가 채워진다.
-
-```java
-// updateUser() 내부
-redisService.delete(cacheKey(userId));
-log.info("Cache Invalidated! (userId={})", userId);
-```
 
 ### 주의할 점
 - 삭제와 갱신 순서가 바뀌면(캐시 먼저 지우고 DB 갱신이 나중) 그 사이 들어온 조회가 다시 stale 값을 캐싱해버릴 수 있으므로, **DB 갱신 → 캐시 삭제** 순서를 지켜야 한다.
 
 ## 이 예제의 구조
 
-흐름을 한 번에 볼 수 있도록 Service 계층 없이 `Controller`에 캐시 조회/갱신 로직을 그대로 두었다.
+흐름을 한 번에 볼 수 있도록 Service 계층 없이 `Controller`에 캐시 조회/갱신 로직을 구현했다.
 
 ```
 cacheaside
@@ -83,29 +74,7 @@ cacheaside
 - `GET /user/{userId}` → 캐시 조회 → Miss 시 DB 조회 후 캐싱 (TTL 300초)
 - `PUT /user/{userId}` → DB 갱신 → 캐시 삭제 (Invalidation)
 
-## API 테스트 (Swagger)
 
-애플리케이션 실행 후 아래 주소에서 Swagger UI로 API를 바로 테스트할 수 있다.
-
-```
-http://localhost:8080/swagger-ui/index.html
-```
-
-`Cache-Aside` 태그 아래 두 엔드포인트가 노출된다.
-
-| Method | Path | 설명 |
-| --- | --- | --- |
-| GET | `/user/{userId}` | 캐시 조회 → Miss 시 DB 조회 후 캐싱 (TTL 300초) |
-| PUT | `/user/{userId}` | DB 갱신 → 캐시 삭제 (Invalidation) |
-
-### 테스트 시나리오
-
-1. `GET /user/1` 을 최초 실행 → **Cache Miss**, 약 1초 지연 후 응답
-2. 같은 요청을 다시 실행 → **Cache Hit**, 즉시 응답
-3. `PUT /user/1` 로 `name`/`email`/`tier` 값을 수정 → DB 갱신 + **캐시 삭제**
-4. `GET /user/1` 을 다시 실행 → 다시 **Cache Miss** 발생, 수정된 최신 값으로 재캐싱됨
-
-애플리케이션 로그에서 `Cache Hit!` / `Cache Miss!` / `Cache Invalidated!` 메시지로 각 단계를 확인할 수 있다.
 
 
 

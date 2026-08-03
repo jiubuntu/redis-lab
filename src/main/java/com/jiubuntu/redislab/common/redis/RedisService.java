@@ -5,6 +5,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -36,5 +37,21 @@ public class RedisService {
 
     public boolean expire(String key, Duration ttl) {
         return Boolean.TRUE.equals(redisTemplate.expire(key, ttl));
+    }
+
+    public void leftPush(String key, Object value) {
+        redisTemplate.opsForList().leftPush(key, value);
+    }
+
+    public Long remove(String key, long count, Object value) {
+        return redisTemplate.opsForList().remove(key, count, value);
+    }
+
+    public void trim(String key, long start, long end) {
+        redisTemplate.opsForList().trim(key, start, end);
+    }
+
+    public List<Object> range(String key, long start, long end) {
+        return redisTemplate.opsForList().range(key, start, end);
     }
 }
