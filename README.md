@@ -11,6 +11,7 @@ Redis 실무 패턴을 하나씩 학습하고, 개념 정리와 동작하는 Spr
 | Cache-Aside               | 캐시를 먼저 조회하고 없으면 DB 조회 후 캐싱, 쓰기 시 캐시 무효화     | [`cacheaside/`](src/main/java/com/jiubuntu/redislab/cacheaside) |
 | 고정 크기 큐(Fixed-size Queue) | Redis List(`LPUSH`+`LTRIM`)로 최근 본 상품 목록을 구현 | [`recentview/`](src/main/java/com/jiubuntu/redislab/recentview) |
 | INCR + SET 자료구조를 사용한 정합성 지키기(상품 조회수) | `SADD`로 유저별 중복 조회를 걸러내고, 새 유저일 때만 `INCR`로 조회수를 원자적으로 증가 | [`viewcount/`](src/main/java/com/jiubuntu/redislab/viewcount) |
+| TTL 기반 임시 인증번호 | 해싱한 전화번호를 key로 인증번호를 TTL과 함께 저장, 검증 성공 시에만 즉시 삭제 | [`authcode/`](src/main/java/com/jiubuntu/redislab/authcode) |
 
 ## 프로젝트 구조
 
@@ -23,25 +24,27 @@ redis-lab
     │   ├── config/                   # Redis, OpenAPI(Swagger) 설정
     │   └── redis/RedisService.java   # Redis 공용 서비스 (get/set/delete 등)
     │
-    ├── cacheaside                    # Cache-Aside 패턴 예제 → README.md 참고
+    ├── cacheaside                    # Cache-Aside 패턴 예제 
     │   ├── controller/                   # 캐시 조회/무효화 로직
     │   ├── dto/                          # 요청/응답 DTO
     │   └── repository/                   # DB를 대신하는 인메모리 저장소
     │
-    ├── recentview                    # Fixed-size Queue 패턴 예제 → README.md 참고
+    ├── recentview                    # Fixed-size Queue 패턴 예제 
     │   ├── controller/                   # 최근 본 목록 갱신/조회 로직
     │   └── dto/                          # 응답 DTO
     │
-    └── viewcount                     # INCR + SET 정합성 패턴 예제 → README.md 참고
-        ├── controller/                   # 조회수 증가/조회 로직
-        └── dto/                          # 응답 DTO
+    ├── viewcount                     # INCR + SET 정합성 패턴 예제 
+    │   ├── controller/                   # 조회수 증가/조회 로직
+    │   └── dto/                          # 응답 DTO
+    │
+    └── authcode                      # TTL 기반 임시 인증번호 패턴 예제
+        ├── controller/                   # 인증번호 발송/검증 로직
+        └── dto/                          # 요청/응답 DTO
 ```
-
-새 패턴을 학습할 때마다 `com.jiubuntu.redislab` 아래에 같은 방식으로 패키지가 하나씩 추가
 
 ## 실행 방법
 
-- Redis는 별도로 설치/기동할 필요 없음. `docker-compose.yml`을 통해 앱 실행 시 자동으로 컨테이너가 뜨고, 앱 종료 시 함께 내려간다. (Docker Desktop만 실행되어 있으면 됨)
+- Redis는 별도로 설치/기동할 필요 없음. `docker-compose.yml`을 통해 앱 실행 시 자동으로 컨테이너가 뜨고, 앱 종료 시 함께 내려간다.
 - 실행 후 아래 주소에서 Swagger를 통해 API를 바로 테스트할 수 있다.
 
 ```
