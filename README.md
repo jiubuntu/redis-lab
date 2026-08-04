@@ -49,3 +49,6 @@ http://localhost:8080/swagger-ui/index.html
 - Spring Boot 4.1.0 (Spring Web MVC, Spring Data Redis)
 - Redis (Docker Compose로 자동 기동)
 - springdoc-openapi (Swagger UI)
+
+<br>
+학습 출처 : 2026년! 백엔드 개발자를 위한 Redis 실전 가이드: 기초부터 실무 패턴까지 - 코딩하는기술사 (인프런 강의)
