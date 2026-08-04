@@ -54,4 +54,18 @@ public class RedisService {
     public List<Object> range(String key, long start, long end) {
         return redisTemplate.opsForList().range(key, start, end);
     }
+
+    public Long increment(String key) {
+        return redisTemplate.opsForValue().increment(key);
+    }
+
+    public long getCounter(String key) {
+        // INCR로 쌓인 값은 역직렬화 시 Integer/Long 등 실제 숫자 타입이 그때그때 달라질 수 있어 get(key, Class)로는 못 받는다.
+        Object value = redisTemplate.opsForValue().get(key);
+        return value instanceof Number number ? number.longValue() : 0L;
+    }
+
+    public Long addToSet(String key, Object value) {
+        return redisTemplate.opsForSet().add(key, value);
+    }
 }

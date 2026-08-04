@@ -10,6 +10,7 @@ Redis 실무 패턴을 하나씩 학습하고, 개념 정리와 동작하는 Spr
 |---------------------------|---------------------------------------------| --- |
 | Cache-Aside               | 캐시를 먼저 조회하고 없으면 DB 조회 후 캐싱, 쓰기 시 캐시 무효화     | [`cacheaside/`](src/main/java/com/jiubuntu/redislab/cacheaside) |
 | 고정 크기 큐(Fixed-size Queue) | Redis List(`LPUSH`+`LTRIM`)로 최근 본 상품 목록을 구현 | [`recentview/`](src/main/java/com/jiubuntu/redislab/recentview) |
+| INCR + SET 자료구조를 사용한 정합성 지키기(상품 조회수) | `SADD`로 유저별 중복 조회를 걸러내고, 새 유저일 때만 `INCR`로 조회수를 원자적으로 증가 | [`viewcount/`](src/main/java/com/jiubuntu/redislab/viewcount) |
 
 ## 프로젝트 구조
 
@@ -27,8 +28,12 @@ redis-lab
     │   ├── dto/                          # 요청/응답 DTO
     │   └── repository/                   # DB를 대신하는 인메모리 저장소
     │
-    └── recentview                    # Fixed-size Queue 패턴 예제 → README.md 참고
-        ├── controller/                   # 최근 본 목록 갱신/조회 로직
+    ├── recentview                    # Fixed-size Queue 패턴 예제 → README.md 참고
+    │   ├── controller/                   # 최근 본 목록 갱신/조회 로직
+    │   └── dto/                          # 응답 DTO
+    │
+    └── viewcount                     # INCR + SET 정합성 패턴 예제 → README.md 참고
+        ├── controller/                   # 조회수 증가/조회 로직
         └── dto/                          # 응답 DTO
 ```
 
